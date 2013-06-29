@@ -1191,7 +1191,12 @@ sub inject_for_type_check
     # This is an optimization to unroll typecheck which makes Mouse types about 40% faster.
     # It only happens when type_check() has not been overridden.
     if( $class->can("type_check") eq __PACKAGE__->can("type_check") ) {
-        my $check = sprintf q[($%s::mutc{cache}{'%s'} ||= %s->_make_constraint('%s'))->check(%s)],
+        my $check;
+        if ($TYPES_FLAVOUR eq "type_tiny") {
+            my $type = $class->_make_constraint($sig->type);
+            $check = $type->inline_check($sig->passed_in) if $type->can_be_inlined;
+        }
+        $check ||= sprintf q[($%s::mutc{cache}{'%s'} ||= %s->_make_constraint('%s'))->check(%s)],
           __PACKAGE__, $sig->type, $class, $sig->type, $sig->passed_in;
         my $error = sprintf q[%s->type_error('%s', %s, '%s') ],
           $class, $sig->type, $sig->passed_in, $sig->variable_name;
